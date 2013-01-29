@@ -37,6 +37,10 @@
 // set this to 0.
 #define PFUseSmallAlertSuppressCheckbox 1
 
+// By default, we allow moving the application into ~/Applications.
+// If you prefer to only use the shared location (/Applications),
+// set this to NO
+static BOOL PFAllowInstallationInUserApplicationsDirectory = NO;
 
 static NSString *AlertSuppressKey = @"moveToApplicationsFolderAlertSuppress";
 
@@ -228,9 +232,19 @@ fail:
 static NSString *PreferredInstallLocation(BOOL *isUserDirectory) {
 	// Return the preferred install location.
 	// Assume that if the user has a ~/Applications folder, they'd prefer their
-	// applications to go there.
+	// applications to go there, unless we're PFAllowInstallationInUserApplicationsDirectory is NO;
 
 	NSFileManager *fm = [NSFileManager defaultManager];
+	
+	// Assume we won't put it in the user's home directory. If we do, we'll set it to YES at that point.
+	if (isUserDirectory)
+		*isUserDirectory = NO;
+
+	NSString *sharedApplicationDirectory = [[NSSearchPathForDirectoriesInDomains(NSApplicationDirectory, NSLocalDomainMask, YES) lastObject] stringByResolvingSymlinksAndAliases];
+	if (PFAllowInstallationInUserApplicationsDirectory == NO)
+	{
+		return sharedApplicationDirectory;
+	}
 
 	NSArray *userApplicationsDirs = NSSearchPathForDirectoriesInDomains(NSApplicationDirectory, NSUserDomainMask, YES);
 
@@ -253,8 +267,7 @@ static NSString *PreferredInstallLocation(BOOL *isUserDirectory) {
 	}
 
 	// No user Applications directory in use. Return the machine local Applications directory
-	if (isUserDirectory) *isUserDirectory = NO;
-	return [[NSSearchPathForDirectoriesInDomains(NSApplicationDirectory, NSLocalDomainMask, YES) lastObject] stringByResolvingSymlinksAndAliases];
+	return sharedApplicationDirectory;
 }
 
 static BOOL IsInApplicationsFolder(NSString *path) {
