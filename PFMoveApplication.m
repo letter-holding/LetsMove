@@ -46,6 +46,7 @@ static NSString *AlertSuppressKey = @"moveToApplicationsFolderAlertSuppress";
 
 
 // Helper functions
+static NSString *PreferredInstallFilename(NSString *installLocation);
 static NSString *PreferredInstallLocation(BOOL *isUserDirectory);
 static BOOL IsInApplicationsFolder(NSString *path);
 static BOOL IsInDownloadsFolder(NSString *path);
@@ -74,7 +75,7 @@ void PFMoveToApplicationsFolderIfNecessary(void) {
 	// Since we are good to go, get the preferred installation directory.
 	BOOL installToUserApplications = NO;
 	NSString *applicationsDirectory = PreferredInstallLocation(&installToUserApplications);
-	NSString *bundleName = [bundlePath lastPathComponent];
+	NSString *bundleName = PreferredInstallFilename(applicationsDirectory);
 	NSString *destinationPath = [applicationsDirectory stringByAppendingPathComponent:bundleName];
 
 	// Check if we need admin password to write to the Applications directory
@@ -228,6 +229,46 @@ fail:
 
 #pragma mark -
 #pragma mark Helper Functions
+
+static NSString *PreferredInstallFilename(NSString *installLocation)
+{
+	NSString *bundleName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString *)kCFBundleNameKey];
+	NSString *shortVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+	NSString *bundleVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey];
+	NSString *preferredInstallFilename = nil;
+	
+	NSString *majorVersion = @"";
+	NSArray *versionComponents = [shortVersion componentsSeparatedByString:@"."];
+	if ([versionComponents count] > 0)
+	{
+		majorVersion = [versionComponents objectAtIndex:0];
+	}
+	
+	NSString *bundleNameFilename = [NSString stringWithFormat:@"%@.app", bundleName];
+	NSString *bundleNameWithMajorVersion = [NSString stringWithFormat:@"%@ %@.app", bundleName, majorVersion];
+	NSString *bundleNameWithShortVersion = [NSString stringWithFormat:@"%@ %@.app", bundleName, shortVersion];
+	NSString *bundleNameWithShortVersionAndBundleVersion = [NSString stringWithFormat:@"%@ %@-%@.app", bundleName, shortVersion, bundleVersion];
+	
+	// Ordered by preference
+	NSArray *orderedFilenames = [NSArray arrayWithObjects:
+								 bundleNameFilename,  bundleNameWithMajorVersion,
+								 bundleNameWithShortVersion, bundleNameWithShortVersionAndBundleVersion, nil];
+	NSString *fallbackFilename = bundleNameWithShortVersionAndBundleVersion;
+	
+	for (NSString *filename in orderedFilenames)
+	{
+		if ([[NSFileManager defaultManager] fileExistsAtPath:[installLocation stringByAppendingPathComponent:filename]] == NO)
+		{
+			preferredInstallFilename = filename;
+			break;
+		}
+	}
+
+	if (preferredInstallFilename == nil)
+		preferredInstallFilename = fallbackFilename;
+	
+	return preferredInstallFilename;
+}
 
 static NSString *PreferredInstallLocation(BOOL *isUserDirectory) {
 	// Return the preferred install location.
