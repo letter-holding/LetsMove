@@ -82,7 +82,7 @@ void PFMoveToApplicationsFolderIfNecessary(void) {
 	BOOL needAuthorization = ([fm isWritableFileAtPath:applicationsDirectory] == NO);
 
 	// Setup the alert
-	NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+	NSAlert *alert = [[NSAlert alloc] init];
 	{
 		NSString *informativeText = nil;
 
@@ -221,7 +221,7 @@ void PFMoveToApplicationsFolderIfNecessary(void) {
 fail:
 	{
 		// Show failure message
-		alert = [[[NSAlert alloc] init] autorelease];
+		alert = [[NSAlert alloc] init];
 		[alert setMessageText:kStrMoveApplicationCouldNotMove];
 		[alert runModal];
 	}
